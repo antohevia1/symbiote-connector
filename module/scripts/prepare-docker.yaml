@@ -1,0 +1,37 @@
+#cloud-config
+# Add groups to the system
+# Adds the ubuntu group with members 'root' and 'sys'
+# and the empty group ec2-user.
+groups:
+  - ubuntu: [root,sys]
+  - adm
+
+# Add users to the system. Users are added after groups are added.
+users:
+  - default
+  - name: ec2-user
+    gecos: ec2-user
+    shell: /bin/bash
+    primary_group: adm
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCPpQ6eVVKFsXn8gjz8+EBaBm76A94N+Qh32y1+GIs7uje0kdf+gXpdsezE5gketGwIz+KjehY1qKpf5SHAH2i5gSMU2rgutIkMkaN8rSAzyAKnWnnoVyzho2RFvsvbCH/RGs3mAbiDa1pBFlTAIYbQsBRar28XzyFFmQ+GUD9jMdAWV/D6Vbbpq/AQxgaNYtWJ6QynJg/8ueWCxiFxHBhxZv16ZVthDWo0AlyhCNUxr5q1rX/9ekwh93vcnxyjyu5Z6XRn9bwGesDO0QSJbucgIoM//D+S5QTMEw10ndC1ddUYHhIHf6lZXNR8aF2v61a8PRZCfycUMxRQCFkzm9b9
+
+
+
+# Sets the docker image and sqlite3 db
+runcmd:
+  - sudo yum update -y
+  - sudo yum install git -y
+  - sudo amazon-linux-extras install docker -y
+  - sudo systemctl enable docker
+  - sudo service docker start
+  - sudo usermod -a -G docker ec2-user
+  - sudo yum install sqlite-devel
+  - sudo docker volume create --name websocket_state
+  - sudo git clone https://github.com/antohevia1/symbiote-connector.git /home/ec2-user/symbiote-connector
+  - sudo sqlite3 /var/lib/docker/volumes/websocket_state/_data/websockets.db < /home/ec2-user/symbiote-connector/module/container/to_copy/db_files/websockets.sql
+  - sudo docker build -t websocket -f /home/ec2-user/symbiote-connector/module/container/Dockerfile .
+  
