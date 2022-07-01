@@ -1,0 +1,7 @@
+Version 1.1 of Web socket API adds the feature to get from ASAPA a token necessary to start
+the process of getting notifications (stream of observations) through a web socket interface established with RAP microservice.
+Includes a set of java classes necessary to parse the received JSON observation messages.
+Stores a list of subscribed resources.
+Supports the transmission and reception of keep alive messages.
+Includes a set of methods to restart the web socket link in case the communication with RAP is disconnected.In this case all
+stored subscribed resources are subscribed again.

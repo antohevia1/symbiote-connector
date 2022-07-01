@@ -1,0 +1,1 @@
+* * * * * /home/ec2-user/cron_files/script.sh >> /var/log/script.log
