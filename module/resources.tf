@@ -100,3 +100,77 @@ resource "aws_instance" "ws_instance" {
   monitoring              = false
   disable_api_termination = false
 }
+
+
+
+
+#Lambda definition
+
+data "archive_file" "lambda_ws" {
+  type = "zip"
+
+  source_dir  = "${path.module}/lambda"
+  output_path = "${path.module}/lambda.zip"
+}
+
+resource "aws_s3_bucket" "lambda_bucket" {
+  bucket = "ash1g13.lambda.bucket.test.com"
+}
+
+resource "aws_s3_bucket_object" "lambda_ws" {
+  bucket = aws_s3_bucket.lambda_bucket.id
+
+  key    = "lambda.zip"
+  source = data.archive_file.lambda_ws.output_path
+
+  etag = filemd5(data.archive_file.lambda_ws.output_path)
+}
+
+resource "aws_iam_role" "lambda_exec" {
+  name = "serverless_lambda"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Sid    = ""
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      }
+    ]
+  })
+}
+
+
+resource "aws_iam_role_policy_attachment" "role-policy-attachment" {
+  for_each = toset([
+   "arn:aws:iam::aws:policy/AmazonSSMFullAccess", 
+   "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  ])
+
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = each.value
+}
+
+resource "aws_lambda_function" "ws_api_lambda" {
+  function_name = "ws_api_lambda"
+
+  s3_bucket = aws_s3_bucket.lambda_bucket.id
+  s3_key    = aws_s3_bucket_object.lambda_ws.key
+
+  runtime = "python3.9"
+  handler = "lambda_function.lambda_handler"
+
+  source_code_hash = data.archive_file.lambda_ws.output_base64sha256
+
+  role = aws_iam_role.lambda_exec.arn
+  timeout = 22
+
+  environment {
+    variables = {
+      INSTANCE_ID = aws_instance.ws_instance.arn
+    }
+  }
+}

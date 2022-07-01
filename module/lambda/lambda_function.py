@@ -3,13 +3,13 @@ import time
 import json
 import boto3
 import hashlib
+import os
 
 ssm = boto3.client("ssm")
 connection_params={}
 user_params = {}
 
-connection_params['instanceId'] ='i-0b049bb2bea1b9443'
-#connection_params['instanceId'] ='i-0781c88c895268a65'
+connection_params['instanceId'] =  os. environ['INSTANCE_ID'].split("/")[1]
 
 #volume name on the given ec2-instance
 vol_name = 'websocket_state'
@@ -95,6 +95,7 @@ def open_socket(state, websocket_id):
     if(state=='1'):
         return {'body':'Do nothing', 'Status': 'Success'}
     else:
+        send_command("sqlite3  "+path_to_db+" 'insert into websockets VALUES(\""+websocket_id+"\", 0 , 0, 0,0)'")
         print('building new container for connection: '+ websocket_id)
         return  send_command(docker_run_command( websocket_id),response=True)
         
