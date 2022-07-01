@@ -55,8 +55,8 @@ EOF
   }
 }
 
-resource "aws_iam_instance_profile" "ec2_profile_ssm" {
-  name = "ec2_profile_ssm"
+resource "aws_iam_instance_profile" "ec2_ssm_profile" {
+  name = "ec2_ssm_profile"
   role = aws_iam_role.ec2_role_ssm.name
 }
 
@@ -70,6 +70,10 @@ resource "aws_iam_role_policy_attachment" "test-attach" {
   policy_arn = data.aws_iam_policy.EC2SSMFullAccess.arn
 }
 
+data "template_file" "user_data" {
+  template = file("scripts/prepare-docker.yaml")
+}
+
 resource "aws_instance" "ws_instance" {
   ami           = data.aws_ami.amazon_linux.id
   instance_type = "t2.xlarge"
@@ -78,22 +82,12 @@ resource "aws_instance" "ws_instance" {
     volume_size = 32
   }
 
-  user_data = <<-EOF
-    #!/bin/bash
-    sudo yum update -y
-    sudo amazon-linux-extras install docker -y
-    sudo systemctl enable docker
-    sudo service docker start
-    sudo usermod -a -G docker ec2-user
-    sudo yum install sqlite-devel
-    sudo docker volume create –name websocket_state
-
-  EOF
+  user_data = data.template_file.user_data.rendered
 
   vpc_security_group_ids = [
   module.ec2_sg.security_group_id]
 
-  iam_instance_profile = aws_iam_instance_profile.ec2_profile_ssm.name
+  iam_instance_profile = aws_iam_instance_profile.ec2_ssm_profile.name
   key_name = "asanchez"
 
 

@@ -33,5 +33,5 @@ runcmd:
   - sudo docker volume create --name websocket_state
   - sudo git clone https://github.com/antohevia1/symbiote-connector.git /home/ec2-user/symbiote-connector
   - sudo sqlite3 /var/lib/docker/volumes/websocket_state/_data/websockets.db < /home/ec2-user/symbiote-connector/module/container/to_copy/db_files/websockets.sql
-  - sudo docker build -t websocket -f /home/ec2-user/symbiote-connector/module/container/Dockerfile .
+  - sudo docker build -t websocket -f /home/ec2-user/symbiote-connector/module/container/Dockerfile /home/ec2-user/symbiote-connector/module/container/
   
