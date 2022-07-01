@@ -1,6 +1,6 @@
 #!/bin/sh
 
-n_connections=`netstat -tnp | grep ESTABLISHED | wc -l`
+n_connections=`netstat -tnp | grep ESTABLISHED | grep java | wc -l`
 db_path=/home/ec2-user/vol/websockets.db
 
 if [ $n_connections -gt 2 ]

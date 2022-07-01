@@ -8,7 +8,7 @@ ssm = boto3.client("ssm")
 connection_params={}
 user_params = {}
 
-connection_params['instanceId'] ='i-079c167e9689d84da'
+connection_params['instanceId'] ='i-0b049bb2bea1b9443'
 #connection_params['instanceId'] ='i-0781c88c895268a65'
 
 #volume name on the given ec2-instance
@@ -69,7 +69,7 @@ def docker_run_command(websocket_id):
         so the websocket is created for the given parameters.
         Note that the image has to be already built """
     
-    return  """docker run -itd -v {}:/home/ec2-user/vol --name {} \
+    return  """docker run -itd --rm -v {}:/home/ec2-user/vol --name {} \
                 -e user='{}' \
                 -e pass='{}' \
                 -e internalID='{}' \
@@ -96,8 +96,6 @@ def open_socket(state, websocket_id):
         return {'body':'Do nothing', 'Status': 'Success'}
     else:
         print('building new container for connection: '+ websocket_id)
-        # register new websocket in websocket table
-        send_command("sqlite3 "+path_to_db+" 'insert into websockets VALUES(\""+websocket_id+"\", 1 , 0, 0,0) '")
         return  send_command(docker_run_command( websocket_id),response=True)
         
         
@@ -149,7 +147,3 @@ def lambda_handler(event, context):
         return respond(err, response)
     else:
         return respond(ValueError('Unsupported method "{}"'.format(operation)))
-  
-        
-
-        
