@@ -1,6 +1,9 @@
 data "aws_vpc" "default" {
   default = true
 }
+
+data "aws_caller_identity" "current" {}
+
 module "ec2_sg" {
   source = "terraform-aws-modules/security-group/aws"
 
@@ -114,7 +117,7 @@ data "archive_file" "lambda_ws" {
 }
 
 resource "aws_s3_bucket" "lambda_bucket" {
-  bucket = "ash1g13.lambda.bucket.test.com"
+  bucket = var.bucket_name
 }
 
 resource "aws_s3_bucket_object" "lambda_ws" {
@@ -174,3 +177,85 @@ resource "aws_lambda_function" "ws_api_lambda" {
     }
   }
 }
+
+# API Gateway
+resource "aws_api_gateway_rest_api" "lambda_api" {
+  name = var.lambda_api_name
+}
+
+resource "aws_api_gateway_resource" "resource" {
+  path_part   = var.api_resource_path
+  parent_id   = aws_api_gateway_rest_api.lambda_api.root_resource_id
+  rest_api_id = aws_api_gateway_rest_api.lambda_api.id
+}
+
+resource "aws_api_gateway_method" "post_method" {
+  rest_api_id   = aws_api_gateway_rest_api.lambda_api.id
+  resource_id   = aws_api_gateway_resource.resource.id
+  http_method   = var.api_post_http_method
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "post_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.lambda_api.id
+  resource_id             = aws_api_gateway_resource.resource.id
+  http_method             = aws_api_gateway_method.post_method.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.ws_api_lambda.arn}/invocations"
+}
+
+
+resource "aws_api_gateway_method" "get_method" {
+  rest_api_id   = aws_api_gateway_rest_api.lambda_api.id
+  resource_id   = aws_api_gateway_resource.resource.id
+  http_method   = var.api_get_http_method
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "get_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.lambda_api.id
+  resource_id             = aws_api_gateway_resource.resource.id
+  http_method             = aws_api_gateway_method.get_method.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.ws_api_lambda.arn}/invocations"
+}
+
+
+resource "aws_api_gateway_method" "delete_method" {
+  rest_api_id   = aws_api_gateway_rest_api.lambda_api.id
+  resource_id   = aws_api_gateway_resource.resource.id
+  http_method   = var.api_delete_http_method
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "delete_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.lambda_api.id
+  resource_id             = aws_api_gateway_resource.resource.id
+  http_method             = aws_api_gateway_method.delete_method.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.ws_api_lambda.arn}/invocations"
+}
+
+resource "aws_lambda_permission" "lambda_apigw" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.ws_api_lambda.arn
+  principal     = "apigateway.amazonaws.com"
+
+    source_arn = "arn:aws:execute-api:${var.aws_region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.lambda_api.id}/*/*${aws_api_gateway_resource.resource.path}"
+}
+
+
+resource "aws_api_gateway_deployment" "deployment" {
+  depends_on = [aws_api_gateway_integration.post_integration,
+                aws_api_gateway_integration.get_integration,
+                aws_api_gateway_integration.delete_integration]
+
+  rest_api_id = aws_api_gateway_rest_api.lambda_api.id
+  stage_name  = var.api_stage_name
+}
+
+

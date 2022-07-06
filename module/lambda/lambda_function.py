@@ -47,7 +47,7 @@ def get_state(container_id):
     """ Gets the state of the given connection. It can either be 0,1 or an empty string """
 
     command = "sqlite3 "+path_to_db+" 'select is_active from websockets where websocket_id =\""+container_id+"\"'"
-    return send_command(command, response=True)['StandardOutputContent'].strip()
+    return {'body': send_command(command, response=True)['StandardOutputContent'].strip(), 'Status': 'Success'}
 
 
 def remove_socket(container_id):
@@ -60,7 +60,7 @@ def remove_socket(container_id):
     #update the websockets table in sqlite3
     command_2 = "sqlite3 "+path_to_db+" 'update websockets set is_active=0 where websocket_id=\""+container_id+"\"'"
     send_command(command_2)
-    return 'Websocket closed'
+    return {'body':'Websocket closed', 'Status': 'Success'}
     
  
 def docker_run_command(websocket_id):
@@ -115,35 +115,28 @@ def lambda_handler(event, context):
     try:
         user_params['asapa_email']  = event['headers']['asapa_email']
         user_params['asapa_pass']  = event['headers']['asapa_pass']
+        connection_params['internalID']  = event['headers']['internalID']
+        connection_params['interWorkingInterface']  = event['headers']['interWorkingInterface']
+        connection_params['platformID']  = event['headers']['platformID']
 
     except:
-         print("Invalid user credentials")
-         return respond(ValueError('Invaid user credentials'))
-    
-    try:
-        payload = json.loads(event['body'])
-        connection_params['internalID']  = payload['internalID']
-        connection_params['interWorkingInterface']  = payload['interWorkingInterface']
-        connection_params['platformID']  = payload['platformID']
-    except:
-         print("Invalid input.")
-         return respond(ValueError('Unsupported input format '))
-    
+         print("Invalid user input")
+         return respond(ValueError('Invaid user input'))
+      
     
     websocket_id = get_hash(connection_params)
-    state = get_state(websocket_id)
+    state = get_state(websocket_id)['body']
 
     operations = {
         'DELETE':   lambda remove_socket, state, websocket_id:  remove_socket(websocket_id),
-        'POST':     lambda open_socket, state, websocket_id:    open_socket(state, websocket_id)
+        'POST':     lambda open_socket, state, websocket_id:    open_socket(state, websocket_id),
+        'GET' :     lambda get_socket_status, state, websocket_id:    get_state(websocket_id),
     }
 
     operation = event['httpMethod']
     if operation in operations:
-        function = open_socket if operation == 'POST' else remove_socket
-        response = operations[operation](function, state,  websocket_id)
-        print('the response is:')
-        print(response)
+        function = open_socket if operation == 'POST' else get_state if operation =='GET'else remove_socket
+        response = operations[operation](function, state,  websocket_id)        
         err = True if response['Status']== "Failed" else False
         return respond(err, response)
     else:
