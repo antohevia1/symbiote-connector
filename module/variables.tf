@@ -20,6 +20,12 @@ variable "lambda_api_name" {
   description = "Name of API Gateway for Lambda Websocket"
 }
 
+variable "lambda_py_runtime" {
+  type        = string
+  default     = "python3.9"
+  description = "Version of Python runtime for the Lambda"
+}
+
 
 variable "api_post_http_method" {
   type        = string

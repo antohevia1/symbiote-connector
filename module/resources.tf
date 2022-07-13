@@ -28,7 +28,7 @@ data "aws_ami" "amazon_linux" {
 
 
 resource "aws_key_pair" "asanchez" {
-  key_name   = "asanchez"
+  key_name   = "asanchez_test"
   public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCPpQ6eVVKFsXn8gjz8+EBaBm76A94N+Qh32y1+GIs7uje0kdf+gXpdsezE5gketGwIz+KjehY1qKpf5SHAH2i5gSMU2rgutIkMkaN8rSAzyAKnWnnoVyzho2RFvsvbCH/RGs3mAbiDa1pBFlTAIYbQsBRar28XzyFFmQ+GUD9jMdAWV/D6Vbbpq/AQxgaNYtWJ6QynJg/8ueWCxiFxHBhxZv16ZVthDWo0AlyhCNUxr5q1rX/9ekwh93vcnxyjyu5Z6XRn9bwGesDO0QSJbucgIoM//D+S5QTMEw10ndC1ddUYHhIHf6lZXNR8aF2v61a8PRZCfycUMxRQCFkzm9b9"
 }
 
@@ -91,7 +91,7 @@ resource "aws_instance" "ws_instance" {
   module.ec2_sg.security_group_id]
 
   iam_instance_profile = aws_iam_instance_profile.ec2_ssm_profile.name
-  key_name = "asanchez"
+  key_name = "asanchez_test"
 
 
 
@@ -163,7 +163,7 @@ resource "aws_lambda_function" "ws_api_lambda" {
   s3_bucket = aws_s3_bucket.lambda_bucket.id
   s3_key    = aws_s3_bucket_object.lambda_ws.key
 
-  runtime = "python3.9"
+  runtime = var.lambda_py_runtime
   handler = "lambda_function.lambda_handler"
 
   source_code_hash = data.archive_file.lambda_ws.output_base64sha256

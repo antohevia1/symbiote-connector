@@ -8,7 +8,9 @@ The client is comprised of three parts, as shown on the image above:
 - API Gateway + Lambda function
 
 To establish a websocket connection with a certain platform it is needed to call the endpoint exposed by API Gateway providing in the headers all three parameters required for the connection (internalID, interWorkingInterface, platformID) and valid ASAPA credentials.
-For each websocket connection a container is created in the EC2-instance. For each message recieved via websocket a post call is sent to API II to persist the message on the data lake. 
+For each websocket connection a container is created in the EC2-instance. 
+
+For each message recieved via websocket a post call is sent to API II to persist the message on the data lake. 
 ## EC2-Instance with docker daemon 
 A docker container is created for each websocket connection requested. The image to create such container is defined in the Dockerfile. Appart from the Dockerfile, the following files are required to create the container:
 - entry.sh --> set of instructions to create the crond process and the java client for the websocket
@@ -18,17 +20,18 @@ A docker container is created for each websocket connection requested. The image
 All such files are contained under module/container/to_copy folder.
 
 #### database
-There is a volume mounted in all running containers where the SQLite database is stored. The purpose of such database is to keep track of the state of each websocket connection, and the primary key is formed passing the three connection parameters as input to `sha1` hash function. The definition of the db can be found at module/container/to_copy/db_files.
+There is a volume mounted in all running containers where the SQLite database is stored. The purpose of such database is to keep track of the state of each websocket connection, and the primary key is formed passing the three connection parameters as input to `sha1` hash function. The definition of the database can be found at module/container/to_copy/db_files.
 
 #### cron job
 The cron job runs the following command every minute to ensure that the websocket connection is healthy:
 
 `netstat -tnp | grep ESTABLISHED | grep java | wc -l`
 
-If it returns 1 or greater it considers that the connection is up and will refresh the database with the results. In case the result is 0, it will increase by 1 `count_err` column in the db. When `count_err` is greater than 2 the container will be stopped and the db updated setting the column `is_active` to 0 (False).
+If it returns 1 or greater it considers that the connection is up and will refresh the database with the results. In case the result is 0, it will increase by 1 `count_err` column in the database. When `count_err` is greater than 2 the container will be stopped and the database updated setting the column `is_active` to 0 (False).
 
 #### java files
-An additional class called DEIntegration.java has been added to the java client in order to send each message recieved via websocket to the Data Engine datalake using a POST request.
+The java client provided by Symbiote has been modified by taking command line inputs to establish the Websocket connection. Also,
+an additional class called DEIntegration.java has been added to the java client in order to send each message recieved via websocket (`@OnMessage`) to the Data Engine datalake using a POST request.
 
 
 ## API Gateway + Lambda function
@@ -64,8 +67,10 @@ And then updates the database with the new state for that websocket.
 
 ## Terraform
 
+Terraform files can be found on the path /module. To install all dependecies needed on the EC2-instance a cloud-init file has been used, which can be found on /module/sripts.
+
 ## Requirements
 - Gradle 4.5
 - Python 3.9
 - openjdk 1.8
-- Terraform >= v1.2.3
+  
