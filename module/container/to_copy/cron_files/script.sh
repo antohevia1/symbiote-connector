@@ -3,7 +3,7 @@
 n_connections=`netstat -tnp | grep ESTABLISHED | grep java | wc -l`
 db_path=/home/ec2-user/vol/websockets.db
 
-if [ $n_connections -gt 2 ]
+if [ $n_connections -gt 0 ]
 then
         echo 'Websocket connection is up'
         sqlite3 $db_path  'UPDATE websockets set is_active=1, count_err=0 where websocket_id ="'${websocketId}'"'
