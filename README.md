@@ -1,4 +1,7 @@
 # Websocket container client
+
+![Diagram](/resources/diagram.PNG)
+
 ## Introduction
 The client is comprised of three parts, as shown on the image above:
 - EC2-Instance with docker daemon 
@@ -23,6 +26,9 @@ The cron job runs the following command every minute to ensure that the websocke
 `netstat -tnp | grep ESTABLISHED | grep java | wc -l`
 
 If it returns 1 or greater it considers that the connection is up and will refresh the database with the results. In case the result is 0, it will increase by 1 `count_err` column in the db. When `count_err` is greater than 2 the container will be stopped and the db updated setting the column `is_active` to 0 (False).
+
+#### java files
+An additional class called DEIntegration.java has been added to the java client in order to send each message recieved via websocket to the Data Engine datalake using a POST request.
 
 
 ## API Gateway + Lambda function
